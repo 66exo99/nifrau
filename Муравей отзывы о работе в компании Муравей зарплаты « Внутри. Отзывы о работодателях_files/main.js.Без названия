@@ -1,0 +1,692 @@
+function bind_login_buttons() {
+	jQuery('#login').bind('click', function(){
+		jQuery('#registration-block').hide();
+		jQuery('#login-block').show();
+		jQuery('#login').addClass('active');
+		jQuery('#registration').removeClass('active');
+	});
+	
+	jQuery('#registration').bind('click', function(){
+		jQuery('#registration-block').show();
+		jQuery('#login-block').hide();
+		jQuery('#login').removeClass('active');
+		jQuery('#registration').addClass('active');
+	});
+}
+
+function markComments(){
+    // finds all hashes and count them
+    var ip_hash = new Object();
+    jQuery('li.comment').each(function(index, elem) {
+        var hash = jQuery(elem).attr('hash');
+        if (hash != undefined) {
+            if (ip_hash[hash]) {
+                ip_hash[hash] = ip_hash[hash] + 1;
+            } else {
+                ip_hash[hash] = 1;
+            }
+        }
+    });
+    // removing hashes without dublicates
+    for (var i in ip_hash) {
+        if (ip_hash[i] > 1) {
+            jQuery('li.comment[hash="'+i+'"]').addClass('hash_found');
+        }
+    }
+}
+
+function showDublicatesByHash(hash) {
+    jQuery('li.comment').removeClass('highlighted');
+    jQuery('li.comment[hash="'+hash+'"]').addClass('highlighted');
+    return false;
+}
+
+function getSelectedDublicate() {
+    return jQuery('li.comment.highlighted').attr('hash');
+}
+
+function showDublicates(elem) {
+    jQuery('li.comment').removeClass('highlighted');
+    
+    var hash = jQuery(elem).parents('li.comment').attr('hash');
+    jQuery('li.comment[hash="'+hash+'"]').addClass('highlighted');
+    return false;
+}
+
+function reply(authorId, commentId, commentBox) {
+	var author = document.getElementById(authorId).innerHTML;
+	var insertStr = '<a href="#' + commentId + '">@' + author.replace(/\t|\n|\r\n/g, "") + '</a>, ';
+
+	appendReply(insertStr, commentBox);
+}
+
+function appendReply(insertStr, commentBox) {
+	if(document.getElementById(commentBox) &&  document.getElementById(commentBox).type == 'textarea') {
+		field =  document.getElementById(commentBox);
+
+	} else {
+		alert("Ошибка!");
+		return false;
+	}
+
+	if (field.value.indexOf(insertStr) > -1) {
+		alert("Вы уже добавили ссылку!");
+		return false;
+	}
+
+	if (field.value.replace(/\s|\t|\n/g, "") == '') {
+		field.value = insertStr;
+	} else {
+		field.value = field.value.replace(/[\n]*$/g, "") + insertStr;
+	}
+	
+    var original = jQuery(field).val();
+    jQuery(field).focus().val('').val(original);
+}
+
+function quote(authorId, commentId, commentBodyId, commentBox) {
+	var author = document.getElementById(authorId).innerHTML;
+	var comment = document.getElementById(commentBodyId).innerHTML;
+	
+	comment = comment.replace(/<!-- thumbs -->[\s\S]*<!-- thumbs end -->/g, "");
+
+	var insertStr = '<blockquote cite="#' + commentBodyId + '">';
+	insertStr += '\n<strong><a href="#' + commentId + '">' + author.replace(/\t|\n|\r\n/g, "") + '</a> :</strong>';
+	insertStr += comment.replace(/\t/g, "");
+	insertStr += '</blockquote>\n';
+
+	insertQuote(insertStr, commentBox);
+}
+
+function insertQuote(insertStr, commentBox) {
+	if(document.getElementById(commentBox) && document.getElementById(commentBox).type == 'textarea') {
+		field = document.getElementById(commentBox);
+
+	} else {
+		alert("Ошибка!");
+		return false;
+	}
+
+	if(document.selection) {
+		field.focus();
+		sel = document.selection.createRange();
+		sel.text = insertStr;
+		field.focus();
+
+	} else if (field.selectionStart || field.selectionStart == '0') {
+		var startPos = field.selectionStart;
+		var endPos = field.selectionEnd;
+		var cursorPos = startPos;
+		field.value = field.value.substring(0, startPos)
+					  + insertStr
+					  + field.value.substring(endPos, field.value.length);
+		cursorPos += insertStr.length;
+		field.focus();
+		field.selectionStart = cursorPos;
+		field.selectionEnd = cursorPos;
+
+	} else {
+		field.value += insertStr;
+		field.focus();
+	}
+}
+
+function initRepresentative()
+{
+	jQuery('#description-edit').bind('click', function(){
+		jQuery('.description-text-edit').show();
+		jQuery('.description').hide();
+		jQuery('#description-edit').hide();
+		return false;
+	});
+	
+	jQuery('#description-edit-submit').bind('click', function(){
+		jQuery('.description-text-edit .processing').show();
+		var postid = jQuery('#comment_post_ID').val();
+		var newtxt = jQuery('#new-text').val();
+    
+		jQuery.ajax({
+            url: '/ajax-edit-post.php',
+            type:	'POST',
+            data: 'p=' + postid + '&t=' + newtxt,
+            error: function() {
+                jQuery('.description-text-edit .processing').hide();
+                jQuery('.description-text-edit').show();
+            },
+            success: function(data) {
+                jQuery('.description-text-edit .processing').hide();
+                jQuery('.description-text-edit').hide();
+                jQuery('#description-cont').html('<p>'+newtxt+'</p>');
+                jQuery('.description').show();
+                jQuery('#description-edit').show();
+            }
+        });
+		
+		return false;
+	});
+	
+	jQuery('#description-edit-cancel').bind('click', function(){
+		jQuery('.description-text-edit').hide();
+		jQuery('.description').show();
+		jQuery('#description-edit').show();
+		return false;
+	});
+	
+	jQuery('.sidebarprocessing').bind('click', function(){
+		month = jQuery('#sidebarmonth').val();
+		url = '/processing.php?id='+representativeid+'&month='+month+'&url='+representativeresulturl;
+		window.location = url;
+		return false;
+	});
+    
+	jQuery('.mainprocessing').bind('click', function(){
+		month = jQuery('#mainmonth').val();
+		url = '/processing.php?id='+representativeid+'&month='+month+'&url='+representativeresulturl;
+		window.location = url;
+		return false;
+	});
+}
+
+jQuery(document).ready(function(){
+	/*bind_login_buttons();*/
+    markComments();
+	
+	initRepresentative();
+    
+    jQuery('#tabs').minitabs(function() {
+		var activetab = jQuery('#tabs .active').attr('href');
+		if (activetab == '#tab-3' || activetab == '#tab-4')
+			jQuery('#respond').fadeOut(333);
+		else
+			jQuery('#respond').fadeIn(333);
+	});
+    
+    initFloatingBanner();
+    
+    jQuery('#load-more-comments').bind('click', function(){
+        var currentpage = jQuery('#current-page').val();
+        var postid = jQuery('#post-id').val();
+        var hash = getSelectedDublicate();
+        
+        jQuery('#load-more-comments').hide();
+        jQuery('.comments-loader').show();
+        
+        jQuery.ajax({
+            url: '/ajax-comments.php',
+            data: 'p=' + postid + '&pg=' + currentpage,
+            error: function() {
+                jQuery('.comments-loader').hide();
+                jQuery('#load-more-comments').show();
+            },
+            success: function(data) {
+                currentpage--; 
+                
+                jQuery('#tab-1 ol.commentlist').append(data);
+                markComments();
+                initComplaints();
+                jQuery('#current-page').val(currentpage);
+                
+                if (document.all && !window.opera && !window.XMLHttpRequest && jQuery.browser.msie) { var isIE6 = true; }
+                else { var isIE6 = false;} ;
+                jQuery.browser.msie6 = isIE6;
+                /*if (!isIE6) {
+                  initTooltips({
+                    timeout: 6000
+                         });
+                }*/
+                
+                jQuery('.comments-loader').hide();
+                
+                if (currentpage > 1) {
+                    jQuery('#load-more-comments').show();
+                }
+                
+                if (hash) {
+                    showDublicatesByHash(hash);
+                }
+                
+                gdsr_init();
+                
+                initFloatingBanner();
+                
+                if (jQuery('a.do-subscribe').length > 0) {
+                  jQuery('a.do-subscribe').magnificPopup({
+                    type:'inline',
+                    midClick: true
+                  });
+                }
+                
+            }
+        });
+
+        return false;
+    });
+    
+	/* scroll to top */
+    jQuery("#walk-top").click(function(){
+		jQuery('body,html').animate({scrollTop:0},500);
+		return false;
+	})
+    var wind_width = jQuery(window).width()
+    if (wind_width < 1205) {
+		jQuery("#walk-top span").hide();
+		if (wind_width > 1080) {
+			new_width = 50
+		} else {
+			new_width = (jQuery(document).width()-980)/2
+		}
+		jQuery("#walk-top").width(new_width);
+	}
+	jQuery(window).resize(function(){
+		var wind_width2=jQuery(window).width();
+		if (wind_width2 < 1205) {
+			jQuery("#walk-top span").hide();
+			if (wind_width2 > 1080) {
+				new_width = 50;
+			} else {
+				new_width = (jQuery(document).width()-980)/2;
+			}
+			jQuery("#walk-top").width(new_width);
+		}else{
+			jQuery("#walk-top span").show();
+			jQuery("#walk-top").width(80);
+		}
+	})
+    jQuery(window).scroll(function(){
+		if (jQuery(window).scrollTop() > jQuery(window).height()) {
+			jQuery("#walk-top").show();
+		} else {
+			jQuery("#walk-top").hide();
+		}
+	})
+	
+	
+	/* Tooltip */
+	
+jQuery('.masterTooltip').hover(function(){
+        // Hover over code
+        var title = jQuery(this).attr('title');
+        jQuery(this).data('tipText', title).removeAttr('title');
+        jQuery('<p class="tooltip"></p>')
+        .text(title)
+        .appendTo('body')
+        .fadeIn('slow');
+}, function() {
+        // Hover out code
+        jQuery(this).attr('title', jQuery(this).data('tipText'));
+        jQuery('.tooltip').remove();
+}).mousemove(function(e) {
+        var mousex = e.pageX + 20; //Get X coordinates
+        var mousey = e.pageY + 10; //Get Y coordinates
+        jQuery('.tooltip')
+        .css({ top: mousey, left: mousex })
+});
+
+initSalaries();
+initComplaints();
+
+jQuery('input').placeholder();
+
+});
+
+function initComplaints()
+{
+    jQuery('#complaint-popup').bind('click', function (){
+        jQuery("#complaint-popup *").removeClass('error');
+    });
+
+    jQuery('a.complaint').off('click');
+    jQuery('a.complaint').magnificPopup({
+        type:'inline',
+        midClick: true,
+        callbacks: {
+            elementParse: function() {
+                jQuery('#complaint-note').val('');
+                jQuery("input[name='complaint-type']").prop('checked', false);
+
+                var dataCommentId = this.st.el.attr('data-comment-id');
+                jQuery("#complaint-comment-id").val(dataCommentId);
+            }
+        }
+    });
+
+    var ajaxurl = 'https://www.vnutri.org/wp-admin/admin-ajax.php';
+
+    jQuery('#complaint-popup a.submit').off('click');
+    jQuery('#complaint-popup a.submit').bind('click', function (){
+        var commentId = jQuery("#complaint-comment-id").val(),
+            typeId = jQuery("input[name='complaint-type']:checked").val(),
+            note = jQuery("#complaint-note").val();
+        
+        if (!typeId || note == '')  {
+            if (!typeId) {
+                jQuery("#complaint-type").addClass('error');
+            }
+            if (note == '') {
+                jQuery("#complaint-note").addClass('error');
+            }
+            return false;
+        }
+
+        jQuery.ajax({
+            url: ajaxurl,
+            method: 'post',
+            dataType: 'json',
+            data: { action: 'add_complaint', comment_id : commentId, type : typeId, note : note}
+        }).done(function(data) {
+            if (data.success == 1) { 
+                alert('Мы получили информацию и рассмотрим ее в ближайшее время');
+            } else {
+                alert('Ошибка: ' + data.message);
+            }
+
+            jQuery.magnificPopup.close()
+        });
+
+        return false;
+    });
+}
+
+function initSalaries()
+{
+	var ajaxurl = 'https://www.vnutri.org/wp-admin/admin-ajax.php';
+	jQuery('#salary-city').autocomplete({
+		serviceUrl: ajaxurl,
+		minChars: 3,
+		params: {action : 'get_city'}
+	});
+
+	jQuery('#salary-position').autocomplete({
+		serviceUrl: ajaxurl,
+		minChars: 3,
+		params: {action : 'get_position'}
+	});
+	
+	jQuery('#salary-submit').bind('click', function (){
+		jQuery('#salary-submit').hide();
+		jQuery('#salary-loader').css( "display", "block");
+		jQuery('#tab-3 .success').hide();
+		jQuery('#tab-3 .errors').text('');
+	
+		var salary = jQuery('#salary-value').val(), 
+			currency = jQuery('#salary-currency').val(),
+			position = jQuery('#salary-position').val(), 
+			city = jQuery('#salary-city').val(),  
+			year = jQuery('#salary-year').val(),
+			company = jQuery('#comment_post_ID').val();
+		
+		jQuery('#tab-3 .errors').text('');
+		
+		jQuery.ajax({
+			url: ajaxurl,
+			method: 'post',
+			dataType: 'json',
+			data: { action: 'save_salary', salary : salary, currency : currency, position : position, city : city, year : year, company : company}
+		}).done(function(data) {
+			jQuery('#salary-submit').show();
+			jQuery('#salary-loader').hide();
+
+			if (data.success == 1) { 
+				jQuery('#tab-3 .success').show();
+				jQuery('#tab-3 .errors').text('');
+			} else {
+				for (var key in data.errors) {
+					jQuery('#tab-3 .success').hide();
+					jQuery('#tab-3 .errors').append('<div class="row"><b>ОШИБКА!</b> '+data.errors[key]+'.</div>');
+				}
+			}
+		});
+		
+		return false;
+	});
+	
+	jQuery('#salarycityfilter').change(function(){
+		jQuery('#salaries-block').html('');
+		jQuery('#salary-table-loader').show();
+		jQuery.ajax({
+			url: ajaxurl,
+			method: 'get',
+			dataType: 'html',
+			data: { action: 'filter', company: jQuery('#comment_post_ID').val(), city: jQuery('#salarycityfilter option:selected').val() }
+		}).done(function(data) {
+			jQuery('#salary-table-loader').hide();
+			jQuery('#salaries-block').html(data);
+		});
+	});
+}
+
+//
+// Minitabs 0.1
+// Requires jquery
+//
+//
+// Usage :
+//
+// jQuery("#container").minitabs([speed],[slide|fade]);
+//
+
+function switchMinitab(id, number, callback)
+{
+  var effect = 'fade', 
+      speed = 0,
+	  element = jQuery('a.tab[href="'+number+'"]');
+  jQuery(id + ">A").removeClass("active");
+  element.addClass("active");
+  element.blur();
+  var re = /([_\-\w]+$)/i;
+  var target = jQuery('#' + re.exec(element.attr('href')));
+  var old = jQuery("#tabs-content>DIV");
+  switch (effect) {
+	case 'fade':
+	  old.fadeOut(speed).fadeOut(speed);
+	  target.fadeIn(speed);
+	  break;
+	case 'slide':
+	  old.slideUp(speed);  
+	  target.fadeOut(speed).fadeIn(speed);
+	  break;
+	default : 
+	  old.hide(speed);
+	  target.show(speed)
+  }
+  callback();
+}
+
+jQuery.fn.minitabs = function(callback) {
+  id = "#" + this.attr('id');
+  jQuery(id + ">A:first").addClass("active");
+  jQuery(id + ">A").click(function(){
+    var href = jQuery(this).attr('href');
+	switchMinitab(id, href, callback);
+	return false;
+  });
+  jQuery(".addcomment").click(function(){
+	var href = '#tab-1';
+	switchMinitab(id, href, callback);
+	respondOffset = jQuery('#respond').offset().top;
+	jQuery('html, body').animate({
+        scrollTop: respondOffset
+    }, 333);
+	return false;
+  });
+  jQuery(".addsalary").click(function(){
+	var href = '#tab-3';
+	switchMinitab(id, href, callback);
+	addOffset = jQuery('#tab-3 .add').offset().top;
+	jQuery('html, body').animate({
+        scrollTop: addOffset
+    }, 333);
+	return false;
+  });
+}
+
+function submform() {
+  jQuery("#commentform").submit();
+}
+
+function verifycode() {
+  if (jQuery('#cuptchh').val() == '') {
+     alert('Введите код с картинки');
+     jQuery('#cuptchh').css("border-color","red");
+     jQuery('#cuptchh').focus();
+  } else {
+     jQuery('#loader').show();
+	 jQuery('#submitBtn').hide();
+     jQuery.ajax({
+      url:	'/wp-content/plugins/yacaptch/verify.php',
+      type:	'POST',
+      contentType: 'application/x-www-form-urlencoded', 
+      data:	'code='+jQuery('#cuptchh').val(),
+      success: function(response){
+        if (response==1){
+          jQuery('#commentform').submit();
+        }else{
+          jQuery('#loader').hide();
+		  jQuery('#submitBtn').show();
+          alert('Неверный код');
+          jQuery('#cuptchh').css("border-color","red");
+          jQuery('#cuptchh').focus();
+        }
+      },
+      error:  function(xhr, str){
+        jQuery('#loader').hide();
+        jQuery('#commentform').submit();
+      }
+    });
+  }
+}
+
+function initFloatingBanner(){
+    var inited = jQuery('#ad-side').hasClass('floating');
+    var msie6 = jQuery.browser == 'msie' && jQuery.browser.version < 7;
+
+    if (/*!msie6 && !inited && typeof floatingoff == 'undefined' && jQuery('#ad-side').length*/false)
+    {
+          var top = jQuery('#ad-side').offset().top,
+                  border = jQuery(document).height() - 250,
+                  banner_end = jQuery('#ad-side').height() + jQuery('#ad-side').offset().top;
+
+          if (banner_end < border)
+          {
+                  jQuery('#ad-side').addClass('floating');
+                  
+                  jQuery(window).scroll(function (event) {
+                    var y = jQuery(this).scrollTop(),
+                            banner_current = jQuery(this).scrollTop() + jQuery('#ad-side').height();
+
+                    if (y >= top) {
+                          jQuery('#ad-side').addClass('fixed');
+                    } else {
+                          jQuery('#ad-side').removeClass('fixed');
+                    }
+                    if (banner_current > (jQuery(document).height() - 200)) {
+                          var offset = jQuery(document).height() - 200 - banner_current;
+                          jQuery('#ad-side').css('top', offset + 'px');
+                    } else {
+                          jQuery('#ad-side').css('top', '');
+                    }
+                  });
+          }
+    }
+}
+
+function addLink() { 
+	var body_element = document.getElementsByTagName('body')[0];
+	var pagelink = " "+document.location.href;
+	if(window.getSelection){
+		sel=window.getSelection();
+		selText=sel.toString();
+		if(!selText||selText.length<30){return}
+		var copytext = selText + pagelink;    
+		var newdiv = document.createElement('div');    
+		newdiv.style.position='absolute';    
+		newdiv.style.left='-99999px';    
+		body_element.appendChild(newdiv);    
+		newdiv.innerHTML = copytext;    
+		sel.selectAllChildren(newdiv);    
+	}else if(document.selection){
+		sel=document.selection;
+		newSel=sel.createRange();
+		selText=newSel.text;
+		if(!selText||selText.length<30){return}
+		var copytext = selText + pagelink;    
+		var newdiv = document.createElement('div');    
+		newdiv.style.position='absolute';    
+		newdiv.style.left='-99999px';    
+		body_element.appendChild(newdiv);    
+		newdiv.innerHTML = copytext;    
+		var range = document.body.createTextRange ();
+             range.moveToElementText (newdiv);
+             range.select();
+		}
+	window.setTimeout(function() {   body_element.removeChild(newdiv);    },0);
+}
+
+jQuery(function(){
+	var slideHeight = 100; // px
+	var defHeight = jQuery('.description').height();
+	if(defHeight >= slideHeight){
+		jQuery('.description').css('height' , slideHeight + 'px');
+		jQuery('#read-more').append('<a href="#">Показать всё</a>');
+		jQuery('#read-more a').click(function(){
+			var curHeight = jQuery('.description').height();
+			if(curHeight == slideHeight){
+				jQuery('.description').animate({
+				  height: defHeight
+				}, "normal");
+				jQuery('#read-more a').html('Свернуть');
+			}else{
+				jQuery('.description').animate({
+				  height: slideHeight
+				}, "normal");
+				jQuery('#read-more a').html('Показать всё');
+			}
+			return false;
+		});
+	}
+});
+
+function showWorkInformer() {
+  jQuery.ajax({
+     url: '/ajax-work-ua.php',
+     error: function() {
+     },
+     success: function(data) {
+       jQuery('.textwidget').html(data);
+     }
+  });
+}
+
+function doSubscribe() {
+  var post_id = jQuery('#comment_post_ID').val();
+  var email = jQuery('#subscribe .email').val();
+  jQuery.ajax({
+    url: 'https://www.vnutri.org/wp-admin/admin-ajax.php',
+	dataType: 'json',
+	method: 'get',
+	data: { action: 'do_subscribe', email : email, post_id : post_id},
+  }).done(function(data) {
+    if (data.success == 1) { 
+	  alert('Подписка успешно добавлена! Пожалуйсте, подтвердите адрес электронной почты.');
+    } else {
+	  alert(data.message);
+	}
+  });
+}
+
+function addComplaint() {
+  var comment_id = 1;
+
+  jQuery.ajax({
+    url: 'https://www.vnutri.org/wp-admin/admin-ajax.php',
+    dataType: 'json',
+    method: 'get',
+    data: { action: 'add_complaint', comment_id : comment_id},
+  }).done(function(data) {
+    if (data.success == 1) { 
+      alert('Мы получили информацию и проверим ее в ближайшее время.');
+    } else {
+      alert(data.message);
+    }
+  });
+}
